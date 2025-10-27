@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Emotion Detection System using AI & Computer Vision</title>
+  <style>
+    body { font-family: Arial, sans-serif; text-align: center; background: #f4f4f4; }
+    h1 { color: #333; }
+    #video { border: 2px solid #666; border-radius: 10px; margin-top: 20px; }
+    #emotion { font-size: 2em; margin-top: 20px; color: #2196F3; }
+    #canvas { display: none; }
+    .footer { margin-top: 40px; color: #888; }
+    button { margin-top: 20px; padding: 10px 30px; font-size: 1em; border-radius: 5px; border: none; background: #2196F3; color: white; cursor: pointer; }
+    button:hover { background: #1976D2; }
+  </style>
+</head>
+<body>
+  <h1>Emotion Detection System using AI & Computer Vision</h1>
+  <video id="video" width="400" height="300" autoplay muted></video>
+  <canvas id="canvas" width="400" height="300"></canvas>
+  <div id="emotion">Detecting emotion...</div>
+  <button onclick="capture()">Detect Emotion</button>
+  <div class="footer">
+    <p>Demo using face-api.js and TensorFlow.js (runs locally in your browser)</p>
+  </div>
+
+  <!-- Load face-api.js from CDN -->
+  <script defer src="https://cdn.jsdelivr.net/npm/face-api.js"></script>
+  <script>
+    const video = document.getElementById('video');
+    const emotionDiv = document.getElementById('emotion');
+    const canvas = document.getElementById('canvas');
+
+    // Load models from CDN
+    Promise.all([
+      faceapi.nets.tinyFaceDetector.loadFromUri('https://cdn.jsdelivr.net/npm/face-api.js/models'),
+      faceapi.nets.faceExpressionNet.loadFromUri('https://cdn.jsdelivr.net/npm/face-api.js/models')
+    ]).then(startVideo);
+
+    function startVideo() {
+      navigator.mediaDevices.getUserMedia({ video: {} })
+        .then(stream => {
+          video.srcObject = stream;
+        })
+        .catch(err => {
+          emotionDiv.innerText = "Camera access denied!";
+        });
+    }
+
+    video.addEventListener('play', () => {
+      emotionDiv.innerText = "Click 'Detect Emotion' to analyze.";
+    });
+
+    async function capture() {
+      // Draw video frame to canvas
+      canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+      const detection = await faceapi.detectSingleFace(canvas, new faceapi.TinyFaceDetectorOptions()).withFaceExpressions();
+
+      if (detection && detection.expressions) {
+        let emotions = detection.expressions;
+        let maxEmotion = Object.keys(emotions).reduce((a, b) => emotions[a] > emotions[b] ? a : b);
+        let confidence = (emotions[maxEmotion] * 100).toFixed(2);
+        emotionDiv.innerText = `Emotion: ${capitalize(maxEmotion)} (${confidence}%)`;
+      } else {
+        emotionDiv.innerText = "No face detected. Try again!";
+      }
+    }
+
+    function capitalize(str) {
+      return str.charAt(0).toUpperCase() + str.slice(1);
+    }
+  </script>
+</body>
+</html>
